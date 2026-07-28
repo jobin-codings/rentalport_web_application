@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+*/node_modules/
+.pnpm-store/
+
+# Environment Variables & Sensitive Credentials (CRITICAL - DO NOT COMMIT)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+frontend/.env
+*.env
+
+# Production Build Outputs
+dist/
+build/
+out/
+.vercel/
+
+# Logs & Temporary Scratch Files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.system_generated/
+scratch/
+
+# IDE & OS Garbage
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.user
