@@ -977,6 +977,9 @@ input[type="range"] {
   border-radius: var(--radius-xl);
   max-width: 640px;
   width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
   overflow: hidden;
   margin: auto 0;
@@ -992,6 +995,7 @@ input[type="range"] {
   font-size: 5.5rem;
   position: relative;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
 }
 
 .modal-close {
@@ -1018,7 +1022,10 @@ input[type="range"] {
 }
 
 .modal-body {
-  padding: 28px 30px 32px;
+  padding: 24px 28px 28px;
+  overflow-y: auto;
+  max-height: calc(90vh - 60px);
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-body .kind {
@@ -1077,7 +1084,10 @@ input[type="range"] {
 }
 
 .modal-form {
-  padding: 30px;
+  padding: 24px 28px 28px;
+  overflow-y: auto;
+  max-height: calc(90vh - 40px);
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-form h2 {

@@ -1,8 +1,19 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const dataStore = require('../services/dataStore');
 const Vehicle = require('../models/Vehicle');
 const { getMongoStatus } = require('../config/db');
+
+// Helper to build safe Mongoose query without CastError on ObjectId
+const buildMongoIdQuery = (idParam) => {
+  if (!idParam) return {};
+  const isObjId = mongoose.Types.ObjectId.isValid(idParam) && String(new mongoose.Types.ObjectId(idParam)) === String(idParam);
+  if (isObjId) {
+    return { $or: [{ id: idParam }, { _id: idParam }] };
+  }
+  return { id: idParam };
+};
 
 // Get all vehicles with filtering
 router.get('/', async (req, res) => {
@@ -16,7 +27,7 @@ router.get('/', async (req, res) => {
       if (city) filter.city = city;
       if (kind) filter.kind = kind;
       if (fuel) filter.fuel = fuel;
-      if (ownerEmail) filter.ownerEmail = ownerEmail;
+      if (ownerEmail) filter.ownerEmail = new RegExp('^' + ownerEmail.trim() + '$', 'i');
       if (inMaintenance !== undefined) filter.inMaintenance = inMaintenance === 'true';
       list = await Vehicle.find(filter);
     } else {
@@ -25,7 +36,10 @@ router.get('/', async (req, res) => {
       if (city) list = list.filter(v => v.city === city);
       if (kind) list = list.filter(v => v.kind === kind);
       if (fuel) list = list.filter(v => v.fuel === fuel);
-      if (ownerEmail) list = list.filter(v => v.ownerEmail === ownerEmail);
+      if (ownerEmail) {
+        const cleanEmail = ownerEmail.trim().toLowerCase();
+        list = list.filter(v => v.ownerEmail && v.ownerEmail.trim().toLowerCase() === cleanEmail);
+      }
       if (inMaintenance !== undefined) list = list.filter(v => v.inMaintenance === (inMaintenance === 'true'));
     }
 
@@ -60,6 +74,8 @@ router.post('/', async (req, res) => {
     const mRate = monthlyRate ? Number(monthlyRate) : Math.round(vRate * 22);
     const regNum = vehicleNumber || `REG-${Math.floor(1000 + Math.random() * 9000)}`;
 
+    const cleanOwnerEmail = ownerEmail.trim().toLowerCase();
+
     if (getMongoStatus()) {
       const newVeh = await Vehicle.create({
         id: newId,
@@ -79,7 +95,7 @@ router.post('/', async (req, res) => {
         fuel: fuel || 'Petrol',
         bg: randomBg,
         image: image || '',
-        ownerEmail,
+        ownerEmail: cleanOwnerEmail,
         status: 'pending',
         available: true,
         inMaintenance: false
@@ -105,7 +121,7 @@ router.post('/', async (req, res) => {
         fuel: fuel || 'Petrol',
         bg: randomBg,
         image: image || '',
-        ownerEmail,
+        ownerEmail: cleanOwnerEmail,
         status: 'pending',
         available: true,
         inMaintenance: false
@@ -126,7 +142,8 @@ router.put('/:id', async (req, res) => {
     const updates = req.body;
 
     if (getMongoStatus()) {
-      const updated = await Vehicle.findOneAndUpdate({ id }, { ...updates, status: 'pending' }, { new: true });
+      const vQuery = buildMongoIdQuery(id);
+      const updated = await Vehicle.findOneAndUpdate(vQuery, { ...updates, status: 'pending' }, { new: true });
       return res.json(updated);
     } else {
       const updated = dataStore.updateVehicle(id, { ...updates, status: 'pending' });
@@ -144,8 +161,9 @@ router.put('/:id/maintenance', async (req, res) => {
     const { inMaintenance } = req.body;
 
     if (getMongoStatus()) {
+      const vQuery = buildMongoIdQuery(id);
       const updated = await Vehicle.findOneAndUpdate(
-        { id },
+        vQuery,
         { inMaintenance: Boolean(inMaintenance), available: !inMaintenance },
         { new: true }
       );
@@ -169,7 +187,8 @@ router.put('/:id/status', async (req, res) => {
     const { status } = req.body;
 
     if (getMongoStatus()) {
-      const updated = await Vehicle.findOneAndUpdate({ id }, { status }, { new: true });
+      const vQuery = buildMongoIdQuery(id);
+      const updated = await Vehicle.findOneAndUpdate(vQuery, { status }, { new: true });
       return res.json(updated);
     } else {
       const updated = dataStore.updateVehicle(id, { status });
@@ -186,7 +205,8 @@ router.delete('/:id', async (req, res) => {
     const { id } = req.params;
 
     if (getMongoStatus()) {
-      await Vehicle.findOneAndDelete({ id });
+      const vQuery = buildMongoIdQuery(id);
+      await Vehicle.findOneAndDelete(vQuery);
       return res.json({ message: 'Vehicle deleted' });
     } else {
       dataStore.removeVehicle(id);

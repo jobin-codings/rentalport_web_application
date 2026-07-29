@@ -19,16 +19,16 @@ const seedDB = async () => {
   try {
     const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
     if (!uri || uri.includes('username:password')) {
-      console.log('⚠️ Please set a valid MONGODB_URI or MONGO_URI in backend/.env to run database seeding.');
+      console.log('Please set a valid MONGODB_URI or MONGO_URI in backend/.env to run database seeding.');
       process.exit(1);
     }
 
-    console.log('⏳ Connecting to MongoDB Atlas...');
+    console.log('Connecting to MongoDB Atlas...');
     await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 10000,
       family: 4
     });
-    console.log('✅ Connected to MongoDB Atlas. Seeding RentalPort dataset...');
+    console.log('Connected to MongoDB Atlas. Seeding RentalPort dataset...');
 
     // Clear existing collections
     await User.deleteMany({});
@@ -42,14 +42,18 @@ const seedDB = async () => {
         email: 'admin@rentalport.com',
         password: await bcrypt.hash('admin123', 8),
         role: 'admin',
-        city: 'Austin'
+        city: 'Austin',
+        status: 'active',
+        isBlocked: false
       },
       {
         name: 'Morgan Yates',
         email: 'partner@rentalport.com',
         password: await bcrypt.hash('partner123', 8),
         role: 'partner',
-        city: 'Austin'
+        city: 'Austin',
+        status: 'active',
+        isBlocked: false
       },
       {
         name: 'Jordan Rivera',
@@ -57,23 +61,27 @@ const seedDB = async () => {
         password: await bcrypt.hash('customer123', 8),
         role: 'customer',
         city: 'Austin',
-        license: 'DL-2381092'
+        license: 'DL-2381092',
+        status: 'active',
+        isBlocked: false
       }
     ]);
 
-    // Seed Vehicles with Real Photography
+    // Seed Vehicles
     const vehiclesData = [
       {
         id: 'v1',
         kind: 'car',
-        emoji: '🚗',
+        emoji: '',
         name: 'Civic Hatchback',
         tagline: 'Sporty city hatch',
         city: 'Austin',
         seats: 5,
         transmission: 'Automatic',
         fuel: 'Petrol',
-        rate: 42,
+        rate: 2200,
+        weeklyRate: 13200,
+        monthlyRate: 48400,
         available: true,
         bg: '#1E293B',
         image: 'https://images.unsplash.com/photo-1590362891991-f776e747a588?auto=format&fit=crop&w=800&q=80',
@@ -83,14 +91,16 @@ const seedDB = async () => {
       {
         id: 'v2',
         kind: 'car',
-        emoji: '🚙',
+        emoji: '',
         name: 'Trailblazer SUV',
         tagline: 'All-terrain family SUV',
         city: 'Seattle',
         seats: 7,
         transmission: 'Automatic',
         fuel: 'Diesel',
-        rate: 68,
+        rate: 3800,
+        weeklyRate: 22800,
+        monthlyRate: 83600,
         available: true,
         bg: '#151D30',
         image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80',
@@ -100,14 +110,16 @@ const seedDB = async () => {
       {
         id: 'v3',
         kind: 'car',
-        emoji: '🚘',
+        emoji: '',
         name: 'Sable Luxury Sedan',
         tagline: 'Executive comfort sedan',
         city: 'Denver',
         seats: 5,
         transmission: 'Automatic',
         fuel: 'Hybrid',
-        rate: 55,
+        rate: 3200,
+        weeklyRate: 19200,
+        monthlyRate: 70400,
         available: true,
         bg: '#1E1B4B',
         image: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80',
@@ -117,14 +129,16 @@ const seedDB = async () => {
       {
         id: 'v4',
         kind: 'car',
-        emoji: '🚐',
+        emoji: '',
         name: 'Voyager Touring Van',
         tagline: '8-seat passenger van',
         city: 'Miami',
         seats: 8,
         transmission: 'Manual',
         fuel: 'Diesel',
-        rate: 74,
+        rate: 4200,
+        weeklyRate: 25200,
+        monthlyRate: 92400,
         available: true,
         bg: '#311B92',
         image: 'https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=800&q=80',
@@ -134,14 +148,16 @@ const seedDB = async () => {
       {
         id: 'v5',
         kind: 'car',
-        emoji: '🚗',
+        emoji: '',
         name: 'Spark Compact Mini',
         tagline: 'Agile budget runabout',
         city: 'Chicago',
         seats: 4,
         transmission: 'Manual',
         fuel: 'Petrol',
-        rate: 30,
+        rate: 1600,
+        weeklyRate: 9600,
+        monthlyRate: 35200,
         available: true,
         bg: '#0F172A',
         image: 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=800&q=80',
@@ -151,14 +167,16 @@ const seedDB = async () => {
       {
         id: 'v6',
         kind: 'car',
-        emoji: '🏎️',
+        emoji: '',
         name: 'Velocity GT Coupe',
         tagline: 'High-performance sports car',
         city: 'Austin',
         seats: 2,
         transmission: 'Automatic',
         fuel: 'Petrol',
-        rate: 95,
+        rate: 5500,
+        weeklyRate: 33000,
+        monthlyRate: 121000,
         available: true,
         bg: '#451A03',
         image: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=800&q=80',
@@ -168,14 +186,16 @@ const seedDB = async () => {
       {
         id: 'v7',
         kind: 'bike',
-        emoji: '🏍️',
+        emoji: '',
         name: 'Roadster 250 Cruiser',
         tagline: 'Urban cruiser motorcycle',
         city: 'Austin',
         seats: 2,
         transmission: 'Manual',
         fuel: 'Petrol',
-        rate: 18,
+        rate: 900,
+        weeklyRate: 5400,
+        monthlyRate: 19800,
         available: true,
         bg: '#064E3B',
         image: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=800&q=80',
@@ -185,14 +205,16 @@ const seedDB = async () => {
       {
         id: 'v8',
         kind: 'bike',
-        emoji: '🛵',
+        emoji: '',
         name: 'Scoot Mini EV',
         tagline: 'Electric urban scooter',
         city: 'Seattle',
         seats: 1,
         transmission: 'Automatic',
         fuel: 'Electric',
-        rate: 12,
+        rate: 600,
+        weeklyRate: 3600,
+        monthlyRate: 13200,
         available: true,
         bg: '#1E293B',
         image: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80',
@@ -202,14 +224,16 @@ const seedDB = async () => {
       {
         id: 'v9',
         kind: 'bike',
-        emoji: '🚲',
+        emoji: '',
         name: 'Pedal Pro Speedster',
         tagline: '10-speed road bicycle',
         city: 'Denver',
         seats: 1,
         transmission: 'Manual',
         fuel: 'None',
-        rate: 8,
+        rate: 400,
+        weeklyRate: 2400,
+        monthlyRate: 8800,
         available: true,
         bg: '#0F172A',
         image: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80',
@@ -219,14 +243,16 @@ const seedDB = async () => {
       {
         id: 'v10',
         kind: 'bike',
-        emoji: '🏍️',
+        emoji: '',
         name: 'Highway King Tourer',
         tagline: 'Heavy touring motorbike',
         city: 'Miami',
         seats: 2,
         transmission: 'Manual',
         fuel: 'Petrol',
-        rate: 28,
+        rate: 1400,
+        weeklyRate: 8400,
+        monthlyRate: 30800,
         available: true,
         bg: '#311B92',
         image: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800&q=80',
@@ -236,14 +262,16 @@ const seedDB = async () => {
       {
         id: 'v11',
         kind: 'bike',
-        emoji: '🛵',
+        emoji: '',
         name: 'Volt Glide Pro',
         tagline: 'Long-range electric scooter',
         city: 'Chicago',
         seats: 1,
         transmission: 'Automatic',
         fuel: 'Electric',
-        rate: 15,
+        rate: 800,
+        weeklyRate: 4800,
+        monthlyRate: 17600,
         available: true,
         bg: '#064E3B',
         image: 'https://images.unsplash.com/photo-1571188654248-7a89213915f7?auto=format&fit=crop&w=800&q=80',
@@ -253,14 +281,16 @@ const seedDB = async () => {
       {
         id: 'v12',
         kind: 'bike',
-        emoji: '🚲',
+        emoji: '',
         name: 'Trail Hopper MTB',
         tagline: 'All-terrain mountain bike',
         city: 'Austin',
         seats: 1,
         transmission: 'Manual',
         fuel: 'None',
-        rate: 10,
+        rate: 500,
+        weeklyRate: 3000,
+        monthlyRate: 11000,
         available: true,
         bg: '#451A03',
         image: 'https://images.unsplash.com/photo-1532298229144-0ec0c57515c7?auto=format&fit=crop&w=800&q=80',
@@ -271,7 +301,6 @@ const seedDB = async () => {
 
     await Vehicle.insertMany(vehiclesData);
 
-    // Seed Sample Bookings for conflict testing & revenue analytics
     const today = new Date();
     const formatDate = (offsetDays) => {
       const d = new Date(today);
@@ -284,14 +313,14 @@ const seedDB = async () => {
         id: 'BK-1001',
         vehicleId: 'v1',
         vehicleName: 'Civic Hatchback',
-        emoji: '🚗',
+        emoji: '',
         customerEmail: 'jordan@example.com',
         customerName: 'Jordan Rivera',
         ownerEmail: 'partner@rentalport.com',
         from: formatDate(2),
         to: formatDate(5),
         city: 'Austin',
-        total: 126,
+        total: 6600,
         status: 'approved',
         paymentStatus: 'paid',
         createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
@@ -300,21 +329,21 @@ const seedDB = async () => {
         id: 'BK-1002',
         vehicleId: 'v6',
         vehicleName: 'Velocity GT Coupe',
-        emoji: '🏎️',
+        emoji: '',
         customerEmail: 'jordan@example.com',
         customerName: 'Jordan Rivera',
         ownerEmail: 'partner@rentalport.com',
         from: formatDate(7),
         to: formatDate(10),
         city: 'Austin',
-        total: 285,
+        total: 16500,
         status: 'pending',
         paymentStatus: 'unpaid',
         createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
       }
     ]);
 
-    console.log('🎉 RentalPort MongoDB Atlas Seeding Completed Successfully!');
+    console.log('RentalPort MongoDB Atlas Seeding Completed Successfully!');
     process.exit(0);
   } catch (err) {
     console.error('Seeding Error:', err.message);

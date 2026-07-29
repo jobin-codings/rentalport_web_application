@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const dataStore = require('../services/dataStore');
 const Booking = require('../models/Booking');
 const Vehicle = require('../models/Vehicle');
@@ -7,14 +8,30 @@ const { getMongoStatus } = require('../config/db');
 
 let BID_COUNTER = 1000;
 
+// Helper to build safe Mongoose query without CastError on ObjectId
+const buildMongoIdQuery = (idParam) => {
+  if (!idParam) return {};
+  const isObjId = mongoose.Types.ObjectId.isValid(idParam) && String(new mongoose.Types.ObjectId(idParam)) === String(idParam);
+  if (isObjId) {
+    return { $or: [{ id: idParam }, { _id: idParam }] };
+  }
+  return { id: idParam };
+};
+
 // Submit new booking request
 router.post('/', async (req, res) => {
   try {
-    const { vehicleId, vehicleName, emoji, customerEmail, customerName, ownerEmail, from, to, city, total } = req.body;
+    let { vehicleId, vehicleName, emoji, customerEmail, customerName, ownerEmail, from, to, pickupTime, returnTime, durationPlan, city, total } = req.body;
 
-    if (!vehicleId || !customerEmail || !from || !to || !total) {
+    if (!vehicleId || !customerEmail || !from || !to || total === undefined || total === null) {
       return res.status(400).json({ error: 'Missing required booking details' });
     }
+
+    const finalTotal = (Number(total) && Number(total) > 0) ? Number(total) : 2200;
+
+    // Normalize email addresses to lower-case trimmed format
+    const cleanCustomerEmail = String(customerEmail).trim().toLowerCase();
+    const cleanOwnerEmail = ownerEmail ? String(ownerEmail).trim().toLowerCase() : 'partner@example.com';
 
     BID_COUNTER++;
     const bookingId = `BK-${BID_COUNTER}`;
@@ -24,14 +41,17 @@ router.post('/', async (req, res) => {
         id: bookingId,
         vehicleId,
         vehicleName,
-        emoji,
-        customerEmail,
-        customerName,
-        ownerEmail,
+        emoji: emoji || '',
+        customerEmail: cleanCustomerEmail,
+        customerName: customerName || cleanCustomerEmail,
+        ownerEmail: cleanOwnerEmail,
         from,
         to,
-        city,
-        total: Number(total),
+        pickupTime: pickupTime || '09:00',
+        returnTime: returnTime || '17:00',
+        durationPlan: durationPlan || 'daily',
+        city: city || 'Austin',
+        total: finalTotal,
         status: 'pending',
         paymentStatus: 'unpaid'
       });
@@ -42,14 +62,17 @@ router.post('/', async (req, res) => {
         id: bookingId,
         vehicleId,
         vehicleName,
-        emoji,
-        customerEmail,
-        customerName,
-        ownerEmail,
+        emoji: emoji || '',
+        customerEmail: cleanCustomerEmail,
+        customerName: customerName || cleanCustomerEmail,
+        ownerEmail: cleanOwnerEmail,
         from,
         to,
-        city,
-        total: Number(total),
+        pickupTime: pickupTime || '09:00',
+        returnTime: returnTime || '17:00',
+        durationPlan: durationPlan || 'daily',
+        city: city || 'Austin',
+        total: finalTotal,
         status: 'pending',
         paymentStatus: 'unpaid',
         createdAt: new Date().toISOString()
@@ -70,11 +93,13 @@ router.get('/my-bookings', async (req, res) => {
     let list = [];
 
     if (getMongoStatus()) {
-      list = await Booking.find(customerEmail ? { customerEmail } : {}).sort({ createdAt: -1 });
+      const query = customerEmail ? { customerEmail: new RegExp('^' + customerEmail.trim() + '$', 'i') } : {};
+      list = await Booking.find(query).sort({ createdAt: -1 });
     } else {
       list = dataStore.getBookings();
       if (customerEmail) {
-        list = list.filter(b => b.customerEmail === customerEmail);
+        const cleanEmail = customerEmail.trim().toLowerCase();
+        list = list.filter(b => b.customerEmail && b.customerEmail.trim().toLowerCase() === cleanEmail);
       }
     }
 
@@ -91,8 +116,12 @@ router.get('/vehicle-dates/:vehicleId', async (req, res) => {
     let bookingsList = [];
 
     if (getMongoStatus()) {
+      const vQuery = buildMongoIdQuery(vehicleId);
+      const targetVehicle = await Vehicle.findOne(vQuery);
+      const vehicleKey = targetVehicle ? targetVehicle.id : vehicleId;
+
       bookingsList = await Booking.find({
-        vehicleId,
+        $or: [{ vehicleId }, { vehicleId: vehicleKey }],
         status: { $in: ['approved', 'pending'] }
       }).select('from to status paymentStatus id customerName');
     } else {
@@ -116,11 +145,13 @@ router.get('/partner-bookings', async (req, res) => {
     let list = [];
 
     if (getMongoStatus()) {
-      list = await Booking.find(ownerEmail ? { ownerEmail } : {}).sort({ createdAt: -1 });
+      const query = ownerEmail ? { ownerEmail: new RegExp('^' + ownerEmail.trim() + '$', 'i') } : {};
+      list = await Booking.find(query).sort({ createdAt: -1 });
     } else {
       list = dataStore.getBookings();
       if (ownerEmail) {
-        list = list.filter(b => b.ownerEmail === ownerEmail);
+        const cleanEmail = ownerEmail.trim().toLowerCase();
+        list = list.filter(b => b.ownerEmail && b.ownerEmail.trim().toLowerCase() === cleanEmail);
       }
     }
 
@@ -136,24 +167,32 @@ router.put('/:id/status', async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
+    if (!id || id === 'undefined') {
+      return res.status(400).json({ error: 'Invalid booking ID' });
+    }
+
     if (getMongoStatus()) {
-      const updated = await Booking.findOneAndUpdate({ id }, { status }, { new: true });
+      const bQuery = buildMongoIdQuery(id);
+      const updated = await Booking.findOneAndUpdate(bQuery, { status }, { new: true });
       if (updated && status === 'approved') {
-        await Vehicle.findOneAndUpdate({ id: updated.vehicleId }, { available: false });
-      } else if (updated && status === 'cancelled') {
-        await Vehicle.findOneAndUpdate({ id: updated.vehicleId }, { available: true });
+        const vQuery = buildMongoIdQuery(updated.vehicleId);
+        await Vehicle.findOneAndUpdate(vQuery, { available: false });
+      } else if (updated && (status === 'cancelled' || status === 'rejected')) {
+        const vQuery = buildMongoIdQuery(updated.vehicleId);
+        await Vehicle.findOneAndUpdate(vQuery, { available: true });
       }
       return res.json(updated);
     } else {
       const updated = dataStore.updateBooking(id, { status });
       if (updated && status === 'approved') {
         dataStore.updateVehicle(updated.vehicleId, { available: false });
-      } else if (updated && status === 'cancelled') {
+      } else if (updated && (status === 'cancelled' || status === 'rejected')) {
         dataStore.updateVehicle(updated.vehicleId, { available: true });
       }
       return res.json(updated);
     }
   } catch (err) {
+    console.error('Update Booking Status Error:', err);
     res.status(500).json({ error: 'Failed to update booking status' });
   }
 });
@@ -163,14 +202,20 @@ router.put('/:id/pay', async (req, res) => {
   try {
     const { id } = req.params;
 
+    if (!id || id === 'undefined') {
+      return res.status(400).json({ error: 'Invalid booking ID' });
+    }
+
     if (getMongoStatus()) {
-      const updated = await Booking.findOneAndUpdate({ id }, { paymentStatus: 'paid' }, { new: true });
+      const bQuery = buildMongoIdQuery(id);
+      const updated = await Booking.findOneAndUpdate(bQuery, { paymentStatus: 'paid' }, { new: true });
       return res.json(updated);
     } else {
       const updated = dataStore.updateBooking(id, { paymentStatus: 'paid' });
       return res.json(updated);
     }
   } catch (err) {
+    console.error('Process Payment Error:', err);
     res.status(500).json({ error: 'Failed to process payment' });
   }
 });

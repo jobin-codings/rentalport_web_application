@@ -94,6 +94,10 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: "Email and password don't match any account." });
     }
 
+    if (user.isBlocked || user.status === 'blocked') {
+      return res.status(403).json({ error: "Your account has been blocked by the admin. Please contact support." });
+    }
+
     const isMatch = bcrypt.compareSync(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ error: "Email and password don't match any account." });
@@ -109,7 +113,9 @@ router.post('/login', async (req, res) => {
         email: user.email,
         role: user.role,
         city: user.city,
-        license: user.license
+        license: user.license,
+        status: user.status || 'active',
+        isBlocked: Boolean(user.isBlocked)
       }
     });
   } catch (err) {

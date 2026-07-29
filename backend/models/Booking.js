@@ -4,7 +4,7 @@ const bookingSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   vehicleId: { type: String, required: true },
   vehicleName: { type: String, required: true },
-  emoji: { type: String, required: true },
+  emoji: { type: String, default: '' },
   customerEmail: { type: String, required: true },
   customerName: { type: String, required: true },
   ownerEmail: { type: String, required: true },

@@ -230,22 +230,22 @@ export default function App() {
       {showAboutModal && (
         <div className="overlay active" style={{ zIndex: 110 }} onClick={() => setShowAboutModal(false)}>
           <div className="modal" style={{ maxWidth: '620px' }} onClick={e => e.stopPropagation()}>
-            <div className="modal-media" style={{ height: '160px', background: 'linear-gradient(135deg, #0F172A 0%, #151D30 100%)' }}>
+            <div className="modal-media" style={{ height: '160px', background: 'linear-gradient(135deg, #0F172A 0%, #151D30 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <button className="modal-close" onClick={() => setShowAboutModal(false)}><X size={20} /></button>
-              <span style={{ fontSize: '3rem' }}>🚗 🏍️</span>
+              <Car size={48} color="var(--amber)" />
             </div>
             <div className="modal-body">
               <div className="kind">Official Mobility Portal</div>
               <h2>About RentalPort</h2>
               <p style={{ fontSize: '0.95rem', color: 'var(--steel-soft)', lineHeight: 1.6, marginBottom: '20px' }}>
-                RentalPort is a premier digital vehicle rental ecosystem connecting drivers with curated cars, SUVs, motorcycles, and bicycles across Austin, Seattle, Denver, Miami, and Chicago.
+                RentalPort is a premier digital vehicle rental ecosystem connecting drivers with curated cars and bicycles various cities in India
               </p>
               
               <div className="spec-grid" style={{ marginBottom: '20px' }}>
-                <div className="spec"><div className="label">Active Fleet</div><div className="val">500+ Vehicles</div></div>
+                <div className="spec"><div className="label">Active Fleet</div><div className="val">100+ Vehicles</div></div>
                 <div className="spec"><div className="label">Verification</div><div className="val">100% Admin Approved</div></div>
                 <div className="spec"><div className="label">Support</div><div className="val">24/7 Helpline</div></div>
-                <div className="spec"><div className="label">Satisfaction</div><div className="val">4.9 ★ Rating</div></div>
+                <div className="spec"><div className="label">Satisfaction</div><div className="val">4.5 Rating</div></div>
               </div>
 
               <button className="btn btn-amber" onClick={() => setShowAboutModal(false)}>

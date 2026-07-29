@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CreditCard, CheckCircle2, Calendar, Shield, DollarSign, Clock, Tag, AlertCircle } from 'lucide-react';
 import AvailabilityCalendar from './AvailabilityCalendar';
 
-export default function BookingFlow({ vehicle, user, initialStep, initialBooking, onBackToFleet, onRequestConfirmation }) {
+export default function BookingFlow({ vehicle, user, initialStep, initialBooking, onBackToFleet, onViewBookings, onRequestConfirmation }) {
   const [step, setStep] = useState(initialStep || 'form'); // 'form' | 'payment' | 'receipt'
   
   // Form dates & times
@@ -25,7 +25,7 @@ export default function BookingFlow({ vehicle, user, initialStep, initialBooking
   const [payCvc, setPayCvc] = useState('');
   const [payErr, setPayErr] = useState('');
 
-  // Active / Created Booking object
+  // Active booking object (created or retrieved)
   const [booking, setBooking] = useState(initialBooking || null);
 
   useEffect(() => {
@@ -41,38 +41,64 @@ export default function BookingFlow({ vehicle, user, initialStep, initialBooking
 
   const fetchBookedDates = async () => {
     try {
-      const res = await fetch(`/api/bookings/vehicle-dates/${vehicle.id}`);
+      const targetId = vehicle.id || vehicle._id;
+      const res = await fetch(`/api/bookings/vehicle-dates/${targetId}`);
       if (res.ok) {
         const data = await res.json();
-        setBookedDates(data);
+        setBookings(data);
       }
     } catch (e) {
       console.error(e);
     }
   };
 
+  const setBookings = (data) => setBookedDates(data);
+
   const targetVehicle = vehicle || (booking ? { name: booking.vehicleName, city: booking.city } : null);
 
-  const start = new Date(fromDate);
-  const end = new Date(toDate);
-  const diff = Math.round((end - start) / (1000 * 60 * 60 * 24));
-  const validDays = diff > 0 ? diff : 0;
+  // Accurate duration calculation in days
+  const calculateDays = () => {
+    if (!fromDate || !toDate) return 0;
+    const s = new Date(fromDate);
+    const e = new Date(toDate);
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) return 0;
+    const diff = Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24));
+    if (diff < 0) return 0;
+    return diff === 0 ? 1 : diff; // Same day pickup & return counts as 1 day rental
+  };
 
-  // Flexible duration plan rate logic
-  let effectiveDailyRate = vehicle ? vehicle.rate : 0;
-  if (durationPlan === 'weekly' && vehicle?.weeklyRate) {
-    effectiveDailyRate = Math.round(vehicle.weeklyRate / 7);
-  } else if (durationPlan === 'weekly') {
-    effectiveDailyRate = Math.round(effectiveDailyRate * 0.85); // 15% discount
-  }
+  const validDays = calculateDays();
 
-  if (durationPlan === 'monthly' && vehicle?.monthlyRate) {
-    effectiveDailyRate = Math.round(vehicle.monthlyRate / 30);
-  } else if (durationPlan === 'monthly') {
-    effectiveDailyRate = Math.round(effectiveDailyRate * 0.65); // 35% discount
-  }
+  // Precise total cost calculation
+  const calculateTotalCost = () => {
+    if (!vehicle || validDays <= 0) return 0;
+    const dailyRate = Number(vehicle.rate) || 0;
+    const weeklyRate = Number(vehicle.weeklyRate) || Math.round(dailyRate * 6);
+    const monthlyRate = Number(vehicle.monthlyRate) || Math.round(dailyRate * 22);
 
-  const totalCost = validDays && vehicle ? validDays * effectiveDailyRate : 0;
+    if (durationPlan === 'weekly') {
+      const weeks = Math.floor(validDays / 7);
+      const remDays = validDays % 7;
+      if (weeks > 0) {
+        return (weeks * weeklyRate) + (remDays * Math.round(weeklyRate / 7));
+      } else {
+        return Math.round(validDays * (weeklyRate / 7));
+      }
+    } else if (durationPlan === 'monthly') {
+      const months = Math.floor(validDays / 30);
+      const remDays = validDays % 30;
+      if (months > 0) {
+        return (months * monthlyRate) + (remDays * Math.round(monthlyRate / 30));
+      } else {
+        return Math.round(validDays * (monthlyRate / 30));
+      }
+    } else {
+      return validDays * dailyRate;
+    }
+  };
+
+  const totalCost = calculateTotalCost();
+  const effectiveDailyRate = validDays > 0 ? Math.round(totalCost / validDays) : (vehicle ? vehicle.rate : 0);
 
   // Conflict detection logic
   const hasDateConflict = () => {
@@ -101,11 +127,11 @@ export default function BookingFlow({ vehicle, user, initialStep, initialBooking
       return;
     }
     if (validDays <= 0) {
-      setErr("Pick a return date that's after the pickup date.");
+      setErr("Pick a return date that's after or same as pickup date.");
       return;
     }
     if (isConflict) {
-      setErr("🚫 Conflict Alert: Selected dates overlap with an existing booking. Please pick alternative dates.");
+      setErr("Conflict Alert: Selected dates overlap with an existing booking. Please pick alternative dates.");
       return;
     }
     if (!user || user.role !== 'customer') {
@@ -118,7 +144,7 @@ export default function BookingFlow({ vehicle, user, initialStep, initialBooking
     onRequestConfirmation({
       kind: 'Confirm request',
       heading: `Send booking request?`,
-      body: `${vehicle.name} (${vehicle.vehicleNumber || 'Plate Pending'}) in ${vehicle.city}, ${fromDate} (${pickupTime}) → ${toDate} (${returnTime}) (${validDays} day${validDays > 1 ? 's' : ''})${planLabel} for $${totalCost} total. This goes to the partner for approval — you won't be charged yet.`,
+      body: `${vehicle.name} (${vehicle.vehicleNumber || 'Plate Pending'}) in ${vehicle.city}, ${fromDate} (${pickupTime}) → ${toDate} (${returnTime}) (${validDays} day${validDays > 1 ? 's' : ''})${planLabel} for ₹${totalCost} total. This goes to the partner for approval — you won't be charged yet.`,
       confirmLabel: 'Send request',
       danger: false
     }, async () => {
@@ -127,9 +153,9 @@ export default function BookingFlow({ vehicle, user, initialStep, initialBooking
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            vehicleId: vehicle.id,
+            vehicleId: vehicle.id || vehicle._id,
             vehicleName: vehicle.name,
-            emoji: vehicle.emoji,
+            emoji: '',
             customerEmail: user.email,
             customerName: user.name,
             ownerEmail: vehicle.ownerEmail,
@@ -143,6 +169,10 @@ export default function BookingFlow({ vehicle, user, initialStep, initialBooking
           })
         });
         const data = await res.json();
+        if (!res.ok) {
+          setErr(data.error || 'Failed to submit booking request.');
+          return;
+        }
         setBooking(data);
         setStep('receipt');
       } catch (e) {
@@ -167,7 +197,7 @@ export default function BookingFlow({ vehicle, user, initialStep, initialBooking
 
     onRequestConfirmation({
       kind: 'Confirm payment',
-      heading: `Charge $${booking.total}?`,
+      heading: `Charge ₹${booking.total}?`,
       body: `Card ending in ${last4} will be charged for ${booking.vehicleName} (${booking.from} → ${booking.to}).`,
       confirmLabel: 'Confirm payment',
       danger: false
@@ -197,7 +227,7 @@ export default function BookingFlow({ vehicle, user, initialStep, initialBooking
           <div className="booking-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
               <div className="kind mono" style={{ fontSize: '.7rem', letterSpacing: '.12em', color: 'var(--amber)', textTransform: 'uppercase' }}>
-                {vehicle.kind === 'car' ? '🚘 4W Vehicle' : '🏍️ 2W Vehicle'} · {vehicle.fuel}
+                {vehicle.kind === 'car' ? '4W Vehicle' : '2W Vehicle'} · {vehicle.fuel}
               </div>
               {vehicle.vehicleNumber && (
                 <span className="mono" style={{ fontSize: '0.78rem', background: 'rgba(255, 255, 255, 0.08)', padding: '2px 8px', borderRadius: '6px', color: '#FFFFFF' }}>
@@ -221,7 +251,7 @@ export default function BookingFlow({ vehicle, user, initialStep, initialBooking
                   onClick={() => setDurationPlan('daily')}
                   style={{ flex: 1, padding: '8px', fontSize: '0.8rem', textAlign: 'center' }}
                 >
-                  Daily (${vehicle.rate}/d)
+                  Daily (₹{vehicle.rate}/d)
                 </button>
                 <button
                   type="button"
@@ -229,7 +259,7 @@ export default function BookingFlow({ vehicle, user, initialStep, initialBooking
                   onClick={() => setDurationPlan('weekly')}
                   style={{ flex: 1, padding: '8px', fontSize: '0.8rem', textAlign: 'center' }}
                 >
-                  Weekly (${vehicle.weeklyRate || Math.round(vehicle.rate * 6)}/wk)
+                  Weekly (₹{vehicle.weeklyRate || Math.round(vehicle.rate * 6)}/wk)
                 </button>
                 <button
                   type="button"
@@ -237,7 +267,7 @@ export default function BookingFlow({ vehicle, user, initialStep, initialBooking
                   onClick={() => setDurationPlan('monthly')}
                   style={{ flex: 1, padding: '8px', fontSize: '0.8rem', textAlign: 'center' }}
                 >
-                  Monthly (${vehicle.monthlyRate || Math.round(vehicle.rate * 22)}/mo)
+                  Monthly (₹{vehicle.monthlyRate || Math.round(vehicle.rate * 22)}/mo)
                 </button>
               </div>
             </div>
@@ -310,7 +340,7 @@ export default function BookingFlow({ vehicle, user, initialStep, initialBooking
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                   {bookedDates.map((b, i) => (
                     <span key={i} className="status-tag pending" style={{ fontSize: '0.72rem' }}>
-                      🚫 Reserved: {b.from} → {b.to}
+                      Reserved: {b.from} → {b.to}
                     </span>
                   ))}
                 </div>
@@ -319,17 +349,17 @@ export default function BookingFlow({ vehicle, user, initialStep, initialBooking
 
             {isConflict && (
               <div className="err" style={{ display: 'block', marginBottom: '16px' }}>
-                🚫 Conflict Alert: Your selected dates ({fromDate} → {toDate}) overlap with an existing booking. Please pick alternative dates!
+                Conflict Alert: Your selected dates ({fromDate} → {toDate}) overlap with an existing booking. Please pick alternative dates!
               </div>
             )}
 
             {err && !isConflict && <div className="err" style={{ display: 'block' }}>{err}</div>}
 
             <div style={{ margin: '20px 0', borderTop: '1px solid rgba(255, 255, 255, 0.08)', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', padding: '16px 0' }}>
-              <div className="summary-row"><span>Base Daily Rate</span><span className="mono">${vehicle.rate} /day</span></div>
-              <div className="summary-row"><span>Discounted Effective Rate</span><span className="mono" style={{ color: 'var(--amber)' }}>${effectiveDailyRate} /day</span></div>
+              <div className="summary-row"><span>Base Daily Cost</span><span className="mono">₹{vehicle.rate} /day</span></div>
+              <div className="summary-row"><span>Discounted Effective Cost</span><span className="mono" style={{ color: 'var(--amber)' }}>₹{effectiveDailyRate} /day</span></div>
               <div className="summary-row"><span>Duration</span><span className="mono">{validDays > 0 ? `${validDays} day${validDays > 1 ? 's' : ''}` : '—'}</span></div>
-              <div className="summary-row total"><span>Total Cost</span><span className="mono" style={{ color: '#FFFFFF' }}>{validDays > 0 ? `$${totalCost}` : '—'}</span></div>
+              <div className="summary-row total"><span>Total Cost</span><span className="mono" style={{ color: '#FFFFFF' }}>{validDays > 0 ? `₹${totalCost}` : '—'}</span></div>
             </div>
 
             <button
@@ -387,11 +417,11 @@ export default function BookingFlow({ vehicle, user, initialStep, initialBooking
 
             <div className="summary-row total" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', marginTop: '14px', paddingTop: '16px' }}>
               <span>Amount due</span>
-              <span className="mono" style={{ color: 'var(--green)' }}>${booking.total}</span>
+              <span className="mono" style={{ color: 'var(--green)' }}>₹{booking.total}</span>
             </div>
 
             <button className="btn btn-green" style={{ marginTop: '18px' }} onClick={handleConfirmPayment}>
-              <CreditCard size={18} /> Confirm & Pay ${booking.total}
+              <CreditCard size={18} /> Confirm & Pay ₹{booking.total}
             </button>
           </div>
         )}
@@ -402,23 +432,38 @@ export default function BookingFlow({ vehicle, user, initialStep, initialBooking
             <div className={`stamp ${booking.paymentStatus === 'paid' ? '' : 'pending'}`}>
               {booking.paymentStatus === 'paid' ? 'PAID & CONFIRMED' : 'REQUEST SENT'}
             </div>
-            <h2 style={{ fontSize: '1.5rem', margin: 0, color: '#FFFFFF' }}>{booking.vehicleName}</h2>
+            <h2 style={{ fontSize: '1.6rem', margin: '4px 0 2px', color: '#FFFFFF' }}>{booking.vehicleName}</h2>
             <div className="plate-num">{booking.id}</div>
 
-            <div className="summary-row"><span>Pickup</span><span className="mono">{booking.from}</span></div>
-            <div className="summary-row"><span>Return</span><span className="mono">{booking.to}</span></div>
-            <div className="summary-row"><span>City</span><span className="mono">{booking.city}</span></div>
-            <div className="summary-row total"><span>Total Paid</span><span className="mono">${booking.total}</span></div>
+            <div style={{ background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '14px', padding: '16px 20px', margin: '16px 0 20px', textAlign: 'left' }}>
+              <div className="summary-row"><span>Renter Name</span><span className="mono" style={{ color: '#FFFFFF', fontWeight: 600 }}>{booking.customerName}</span></div>
+              <div className="summary-row"><span>Renter Email</span><span className="mono">{booking.customerEmail}</span></div>
+              <div className="summary-row"><span>Pickup Date & Time</span><span className="mono" style={{ color: 'var(--amber)', fontWeight: 700 }}>{booking.from} ({booking.pickupTime || '09:00'})</span></div>
+              <div className="summary-row"><span>Return Date & Time</span><span className="mono" style={{ color: 'var(--amber)', fontWeight: 700 }}>{booking.to} ({booking.returnTime || '17:00'})</span></div>
+              <div className="summary-row"><span>Pickup City</span><span className="mono">{booking.city}</span></div>
+              <div className="summary-row"><span>Rental Duration Plan</span><span className="mono" style={{ textTransform: 'capitalize' }}>{booking.durationPlan || 'daily'}</span></div>
+              <div className="summary-row total" style={{ paddingTop: '14px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                <span>Total Bill Amount</span>
+                <span className="mono" style={{ color: 'var(--green)', fontSize: '1.3rem', fontWeight: 800 }}>₹{booking.total}</span>
+              </div>
+            </div>
 
             <p className="hint" style={{ marginTop: '16px', lineHeight: 1.6 }}>
               {booking.paymentStatus === 'paid'
-                ? "You're all set! Manage or view details for this booking any time from your Customer Dashboard."
-                : "Your booking request has been dispatched to the partner for approval. Track status from your dashboard."}
+                ? "Your booking is recorded and confirmed! You can view and manage this booking any time in your Customer Dashboard."
+                : "Your booking request is recorded and dispatched to the rental partner for approval. Track live status from your dashboard."}
             </p>
 
-            <button className="btn btn-ghost" style={{ marginTop: '24px' }} onClick={onBackToFleet}>
-              Back to fleet
-            </button>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onBackToFleet}>
+                Back to fleet
+              </button>
+              {onViewBookings && (
+                <button className="btn btn-amber" style={{ flex: 1 }} onClick={onViewBookings}>
+                  View in My Bookings
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>

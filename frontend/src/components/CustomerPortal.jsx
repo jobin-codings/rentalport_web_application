@@ -165,19 +165,19 @@ export default function CustomerPortal({ user, onRequireAuth, setToast }) {
                 className={`filter-pill ${vehicleType === '2W' ? 'active' : ''}`}
                 onClick={() => setVehicleType('2W')}
               >
-                🏍️ 2-Wheelers
+                2-Wheelers
               </button>
               <button
                 className={`filter-pill ${vehicleType === '4W' ? 'active' : ''}`}
                 onClick={() => setVehicleType('4W')}
               >
-                🚗 4-Wheelers
+                4-Wheelers
               </button>
               <button
                 className={`filter-pill ${fuelType === 'EV' ? 'active' : ''}`}
                 onClick={() => setFuelType(fuelType === 'EV' ? 'All' : 'EV')}
               >
-                ⚡ Electric (EV)
+                Electric (EV)
               </button>
             </div>
           </div>
@@ -193,7 +193,7 @@ export default function CustomerPortal({ user, onRequireAuth, setToast }) {
                   </span>
                   {vehicle.fuel_type === 'EV' && (
                     <span className="badge-ev">
-                      ⚡ EV
+                      EV
                     </span>
                   )}
                 </div>
@@ -208,10 +208,10 @@ export default function CustomerPortal({ user, onRequireAuth, setToast }) {
                   </div>
 
                   <div className="card-specs">
-                    <div>⛽ <b>Fuel:</b> {vehicle.fuel_type}</div>
-                    <div>⚙️ <b>Trans:</b> {vehicle.transmission}</div>
-                    <div>👥 <b>Capacity:</b> {vehicle.seating_capacity} Seats</div>
-                    <div>⚡ <b>Range/Mil:</b> {vehicle.specs ? vehicle.specs.mileage : '35 mpg'}</div>
+                    <div><b>Fuel:</b> {vehicle.fuel_type}</div>
+                    <div><b>Trans:</b> {vehicle.transmission}</div>
+                    <div><b>Capacity:</b> {vehicle.seating_capacity} Seats</div>
+                    <div><b>Range/Mil:</b> {vehicle.specs ? vehicle.specs.mileage : '35 mpg'}</div>
                   </div>
 
                   <div className="card-footer">

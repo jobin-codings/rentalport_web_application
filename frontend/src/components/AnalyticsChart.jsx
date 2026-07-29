@@ -1,16 +1,16 @@
 import React from 'react';
-import { TrendingUp, DollarSign, Activity, Award } from 'lucide-react';
+import { TrendingUp, Activity, Award } from 'lucide-react';
 
 export default function AnalyticsChart({ title, data = [], type = 'revenue' }) {
   // Demo dataset generator if data is small
   const chartPoints = data.length > 0 ? data : [
-    { label: 'Jan', value: 1200, count: 8 },
-    { label: 'Feb', value: 1900, count: 12 },
-    { label: 'Mar', value: 2800, count: 18 },
-    { label: 'Apr', value: 2400, count: 15 },
-    { label: 'May', value: 3600, count: 24 },
-    { label: 'Jun', value: 4800, count: 31 },
-    { label: 'Jul', value: 4200, count: 28 }
+    { label: 'Jan', value: 42000, count: 18 },
+    { label: 'Feb', value: 59000, count: 22 },
+    { label: 'Mar', value: 78000, count: 28 },
+    { label: 'Apr', value: 64000, count: 25 },
+    { label: 'May', value: 96000, count: 34 },
+    { label: 'Jun', value: 128000, count: 41 },
+    { label: 'Jul', value: 112000, count: 38 }
   ];
 
   const maxValue = Math.max(...chartPoints.map(p => p.value), 100);
@@ -20,7 +20,7 @@ export default function AnalyticsChart({ title, data = [], type = 'revenue' }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
         <div>
           <h3 style={{ fontSize: '1.2rem', color: '#FFFFFF', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {type === 'revenue' ? <DollarSign color="var(--green)" size={20} /> : <Activity color="var(--amber)" size={20} />}
+            {type === 'revenue' ? <TrendingUp color="var(--green)" size={20} /> : <Activity color="var(--amber)" size={20} />}
             {title || 'Performance Analytics'}
           </h3>
           <p style={{ fontSize: '0.82rem', color: 'var(--steel-soft)', margin: '4px 0 0' }}>
@@ -40,10 +40,10 @@ export default function AnalyticsChart({ title, data = [], type = 'revenue' }) {
           return (
             <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
               <div style={{ fontSize: '0.72rem', color: 'var(--amber)', fontFamily: 'Roboto Mono, monospace', marginBottom: '6px', fontWeight: 700 }}>
-                ${pt.value}
+                ₹{pt.value}
               </div>
               <div
-                title={`${pt.label}: $${pt.value} (${pt.count} bookings)`}
+                title={`${pt.label}: ₹${pt.value} (${pt.count} bookings)`}
                 style={{
                   width: '100%',
                   maxWidth: '36px',
@@ -66,7 +66,7 @@ export default function AnalyticsChart({ title, data = [], type = 'revenue' }) {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', fontSize: '0.82rem', color: 'var(--steel-soft)' }}>
         <span>Total Fleet Bookings: <b style={{ color: '#FFFFFF' }}>{chartPoints.reduce((s, p) => s + (p.count || 0), 0)}</b></span>
-        <span>Average Daily Rate: <b style={{ color: 'var(--amber)' }}>$52.40</b></span>
+        <span>Average Daily Cost: <b style={{ color: 'var(--amber)' }}>₹2,200</b></span>
       </div>
     </div>
   );

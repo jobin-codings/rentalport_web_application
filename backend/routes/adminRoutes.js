@@ -93,13 +93,38 @@ router.get('/users', async (req, res) => {
   try {
     let list = [];
     if (getMongoStatus()) {
-      list = await User.find().select('-password');
+      list = await User.find().select('-password').sort({ createdAt: -1 });
     } else {
       list = dataStore.getUsers();
     }
     res.json(list);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// Block or Unblock User (Admin)
+router.put('/users/:id/block', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isBlocked } = req.body;
+    const blockedBool = Boolean(isBlocked);
+    const statusVal = blockedBool ? 'blocked' : 'active';
+
+    if (getMongoStatus()) {
+      const updated = await User.findOneAndUpdate(
+        { $or: [{ _id: id }, { email: id }] },
+        { isBlocked: blockedBool, status: statusVal },
+        { new: true }
+      ).select('-password');
+      return res.json(updated);
+    } else {
+      const updated = dataStore.updateUserBlockStatus(id, blockedBool);
+      return res.json(updated);
+    }
+  } catch (err) {
+    console.error('Block user error:', err);
+    res.status(500).json({ error: 'Failed to update user block status' });
   }
 });
 

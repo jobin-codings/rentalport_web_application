@@ -29,20 +29,30 @@ export default function PartnerDashboard({ user, onRequestConfirmation }) {
   const [vfErr, setVfErr] = useState('');
 
   useEffect(() => {
-    if (user) fetchPartnerData();
+    if (user) {
+      fetchPartnerData();
+      const interval = setInterval(() => {
+        fetchPartnerData();
+      }, 5000);
+      return () => clearInterval(interval);
+    }
   }, [user]);
 
   const fetchPartnerData = async () => {
     try {
       const vRes = await fetch(`/api/vehicles?ownerEmail=${user.email}`);
-      const vData = await vRes.json();
-      setMyVehicles(vData);
+      if (vRes.ok) {
+        const vData = await vRes.json();
+        setMyVehicles(vData);
+      }
 
       const bRes = await fetch(`/api/bookings/partner-bookings?ownerEmail=${user.email}`);
-      const bData = await bRes.json();
-      setMyBookings(bData);
+      if (bRes.ok) {
+        const bData = await bRes.json();
+        setMyBookings(bData);
+      }
     } catch (e) {
-      console.error(e);
+      console.error('Partner poll error:', e);
     }
   };
 
@@ -161,15 +171,16 @@ export default function PartnerDashboard({ user, onRequestConfirmation }) {
   };
 
   const handleGrantBooking = (b) => {
+    const targetId = b.id || b._id;
     onRequestConfirmation({
       kind: 'Grant booking',
       heading: `Grant this booking to ${b.customerName}?`,
-      body: `${b.vehicleName} will be marked unavailable for ${b.from} → ${b.to} and the customer will be asked to pay $${b.total}.`,
+      body: `${b.vehicleName} will be marked unavailable for ${b.from} → ${b.to} and the customer will be asked to pay ₹${b.total}.`,
       confirmLabel: 'Grant booking',
       danger: false
     }, async () => {
       try {
-        await fetch(`/api/bookings/${b.id}/status`, {
+        await fetch(`/api/bookings/${targetId}/status`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'approved' })
@@ -182,6 +193,7 @@ export default function PartnerDashboard({ user, onRequestConfirmation }) {
   };
 
   const handleDeclineBooking = (b) => {
+    const targetId = b.id || b._id;
     onRequestConfirmation({
       kind: 'Decline booking',
       heading: `Decline ${b.customerName}'s request?`,
@@ -189,7 +201,7 @@ export default function PartnerDashboard({ user, onRequestConfirmation }) {
       confirmLabel: 'Decline booking'
     }, async () => {
       try {
-        await fetch(`/api/bookings/${b.id}/status`, {
+        await fetch(`/api/bookings/${targetId}/status`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'rejected' })
@@ -229,7 +241,7 @@ export default function PartnerDashboard({ user, onRequestConfirmation }) {
             <div className="lb">Active rentals (View)</div>
           </div>
           <div className="stat" style={{ cursor: 'pointer' }} onClick={() => setActivePartnerModal('revenue')}>
-            <div className="num" style={{ color: 'var(--green)' }}>${totalRevenue}</div>
+            <div className="num" style={{ color: 'var(--green)' }}>₹{totalRevenue}</div>
             <div className="lb">Revenue graph & details</div>
           </div>
         </div>
@@ -268,11 +280,11 @@ export default function PartnerDashboard({ user, onRequestConfirmation }) {
                       {v.image ? (
                         <img src={v.image} alt={v.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} />
                       ) : (
-                        <span>{v.emoji}</span>
+                        v.kind === 'car' ? <Car size={42} color="var(--amber)" /> : <Bike size={42} color="var(--amber)" />
                       )}
                     </div>
                     <div className="card-body">
-                      <div className="kind">{v.kind}</div>
+                      <div className="kind">{v.kind === 'car' ? '4W Vehicle' : '2W Vehicle'}</div>
                       <h3>{v.name}</h3>
                       <div className="card-city"><MapPin size={14} /> {v.city}</div>
                       <div className="card-meta">
@@ -280,7 +292,7 @@ export default function PartnerDashboard({ user, onRequestConfirmation }) {
                         <span><Settings size={13} /> {v.transmission}</span>
                         <span><Fuel size={13} /> {v.fuel}</span>
                       </div>
-                      <div className="card-price"><div className="price-meter">${v.rate}<small> /day</small></div></div>
+                      <div className="card-price"><div className="price-meter">₹{v.rate}<small> /day</small></div></div>
                       <div className="card-actions">
                         <button className="card-cta" onClick={() => handleOpenForm(v)}>
                           <Edit3 size={14} /> Edit
@@ -317,13 +329,15 @@ export default function PartnerDashboard({ user, onRequestConfirmation }) {
 
                 return (
                   <div key={b.id || b._id} className="booking-item">
-                    <div className="emoji">{b.emoji}</div>
+                    <div className="emoji" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', padding: '12px', borderRadius: '12px' }}>
+                      <Car size={24} color="var(--amber)" />
+                    </div>
                     <div className="info">
                       <h4>{b.vehicleName}</h4>
                       <div className="dates">{b.from} ({b.pickupTime || '09:00'}) → {b.to} ({b.returnTime || '17:00'}) · {b.city}</div>
                       <div className="who">Customer: {b.customerName} ({b.customerEmail})</div>
                     </div>
-                    <div className="mono" style={{ fontWeight: 700, fontSize: '1.2rem', color: '#FFFFFF' }}>${b.total}</div>
+                    <div className="mono" style={{ fontWeight: 700, fontSize: '1.2rem', color: '#FFFFFF' }}>₹{b.total}</div>
                     <span className={`status-tag ${displayStatus}`}>{displayStatus}</span>
                     <div className="row-actions">
                       {isPending && (
@@ -357,13 +371,15 @@ export default function PartnerDashboard({ user, onRequestConfirmation }) {
             <div className="list-block">
               {myBookings.filter(b => b.status === 'cancelled').map(b => (
                 <div key={b.id || b._id} className="booking-item">
-                  <div className="emoji">{b.emoji}</div>
+                  <div className="emoji" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', padding: '12px', borderRadius: '12px' }}>
+                    <Car size={24} color="var(--amber)" />
+                  </div>
                   <div className="info">
                     <h4>{b.vehicleName}</h4>
                     <div className="dates">{b.from} → {b.to} · {b.city}</div>
                     <div className="who">Customer: {b.customerName} ({b.customerEmail})</div>
                   </div>
-                  <div className="mono" style={{ fontWeight: 700, fontSize: '1.2rem', color: 'var(--steel-soft)' }}>${b.total}</div>
+                  <div className="mono" style={{ fontWeight: 700, fontSize: '1.2rem', color: 'var(--steel-soft)' }}>₹{b.total}</div>
                   <span className="status-tag cancelled">Cancelled</span>
                 </div>
               ))}
@@ -436,19 +452,19 @@ export default function PartnerDashboard({ user, onRequestConfirmation }) {
                     <input type="text" id="vf-city" placeholder="e.g. Austin" value={vfCity} onChange={e => setVfCity(e.target.value)} />
                   </div>
                   <div className="field">
-                    <label htmlFor="vf-rate">Daily Rate ($)</label>
-                    <input type="number" id="vf-rate" min="1" placeholder="42" value={vfRate} onChange={e => setVfRate(e.target.value)} />
+                    <label htmlFor="vf-rate">Daily Cost (₹)</label>
+                    <input type="number" id="vf-rate" min="1" placeholder="2200" value={vfRate} onChange={e => setVfRate(e.target.value)} />
                   </div>
                 </div>
 
                 <div className="field-row">
                   <div className="field">
-                    <label htmlFor="vf-wrate">Weekly Rate ($)</label>
-                    <input type="number" id="vf-wrate" min="1" placeholder="250" value={vfWeeklyRate} onChange={e => setVfWeeklyRate(e.target.value)} />
+                    <label htmlFor="vf-wrate">Weekly Cost (₹)</label>
+                    <input type="number" id="vf-wrate" min="1" placeholder="13200" value={vfWeeklyRate} onChange={e => setVfWeeklyRate(e.target.value)} />
                   </div>
                   <div className="field">
-                    <label htmlFor="vf-mrate">Monthly Rate ($)</label>
-                    <input type="number" id="vf-mrate" min="1" placeholder="900" value={vfMonthlyRate} onChange={e => setVfMonthlyRate(e.target.value)} />
+                    <label htmlFor="vf-mrate">Monthly Cost (₹)</label>
+                    <input type="number" id="vf-mrate" min="1" placeholder="48400" value={vfMonthlyRate} onChange={e => setVfMonthlyRate(e.target.value)} />
                   </div>
                 </div>
 

@@ -197,7 +197,7 @@ export default function AuthScreen({ onEnterApp, onCancel }) {
                   className={`role-opt ${regRole === 'customer' ? 'active' : ''}`}
                   onClick={() => setRegRole('customer')}
                 >
-                  <span className="ic">🧍</span>
+                  <User size={24} color="var(--amber)" style={{ margin: '0 auto 6px', display: 'block' }} />
                   <span className="lb">Customer</span>
                 </button>
                 <button
@@ -205,7 +205,7 @@ export default function AuthScreen({ onEnterApp, onCancel }) {
                   className={`role-opt ${regRole === 'partner' ? 'active' : ''}`}
                   onClick={() => setRegRole('partner')}
                 >
-                  <span className="ic">🔧</span>
+                  <ShieldCheck size={24} color="var(--blue)" style={{ margin: '0 auto 6px', display: 'block' }} />
                   <span className="lb">Renting partner</span>
                 </button>
               </div>

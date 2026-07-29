@@ -7,6 +7,8 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['customer', 'partner', 'admin'], default: 'customer' },
   city: { type: String, default: 'Austin' },
   license: { type: String, default: null },
+  status: { type: String, enum: ['active', 'blocked'], default: 'active' },
+  isBlocked: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 });
 

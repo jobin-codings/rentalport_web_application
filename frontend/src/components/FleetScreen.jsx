@@ -10,7 +10,7 @@ export default function FleetScreen({ onSelectVehicleForBooking }) {
   const [cityFilter, setCityFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState(''); // '' | 'car' (4W) | 'bike' (2W)
   const [fuelFilter, setFuelFilter] = useState(''); // '' | 'Petrol' | 'Diesel' | 'Electric' | 'Hybrid' | 'None'
-  const [maxPrice, setMaxPrice] = useState(100);
+  const [maxPrice, setMaxPrice] = useState(8000);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
@@ -99,14 +99,15 @@ export default function FleetScreen({ onSelectVehicleForBooking }) {
           <div className="search-bar-row2">
             <div className="field">
               <label style={{ color: 'var(--steel-soft)', display: 'flex', justifyContent: 'space-between' }} htmlFor="search-price">
-                <span>Max Daily Rate Limit</span>
-                <span id="search-price-val" className="mono" style={{ color: 'var(--amber)', fontWeight: 700 }}>${maxPrice}/day</span>
+                <span>Max Daily Cost Limit</span>
+                <span id="search-price-val" className="mono" style={{ color: 'var(--amber)', fontWeight: 700 }}>₹{maxPrice}/day</span>
               </label>
               <input
                 type="range"
                 id="search-price"
-                min="5"
-                max="100"
+                min="200"
+                max="10000"
+                step="100"
                 value={maxPrice}
                 onChange={e => setMaxPrice(Number(e.target.value))}
                 style={{ padding: 0, width: '100%', height: 'auto', marginTop: '6px' }}
@@ -134,10 +135,10 @@ export default function FleetScreen({ onSelectVehicleForBooking }) {
             All Fleet
           </button>
           <button className={`filter-chip ${activeFilter === 'car' ? 'active' : ''}`} onClick={() => setActiveFilter('car')}>
-            🚘 4-Wheelers (Cars)
+            4-Wheelers (Cars)
           </button>
           <button className={`filter-chip ${activeFilter === 'bike' ? 'active' : ''}`} onClick={() => setActiveFilter('bike')}>
-            🏍️ 2-Wheelers (Bikes)
+            2-Wheelers (Bikes)
           </button>
           <button className={`filter-chip ${activeFilter === 'available' ? 'active' : ''}`} onClick={() => setActiveFilter('available')}>
             Available Now
@@ -148,7 +149,7 @@ export default function FleetScreen({ onSelectVehicleForBooking }) {
           {filteredVehicles.map(v => {
             const isAvail = v.available && !v.inMaintenance;
             const statusLabel = v.inMaintenance ? 'no' : (isAvail ? 'yes' : 'no');
-            const statusText = v.inMaintenance ? '🔧 In Maintenance' : (isAvail ? 'Available' : 'Booked Out');
+            const statusText = v.inMaintenance ? 'In Maintenance' : (isAvail ? 'Available' : 'Booked Out');
 
             return (
               <div key={v.id} className="card">
@@ -162,12 +163,12 @@ export default function FleetScreen({ onSelectVehicleForBooking }) {
                       onError={(e) => { e.target.style.display = 'none'; }}
                     />
                   ) : (
-                    <span>{v.emoji}</span>
+                    v.kind === 'car' ? <Car size={42} color="var(--amber)" /> : <Bike size={42} color="var(--amber)" />
                   )}
                 </div>
                 <div className="card-body">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div className="kind">{v.kind === 'car' ? '🚘 4W' : '🏍️ 2W'}</div>
+                    <div className="kind">{v.kind === 'car' ? '4W Vehicle' : '2W Vehicle'}</div>
                     {v.vehicleNumber && (
                       <span className="mono" style={{ fontSize: '0.72rem', color: 'var(--steel-soft)' }}>
                         {v.vehicleNumber}
@@ -184,7 +185,7 @@ export default function FleetScreen({ onSelectVehicleForBooking }) {
                     <span><Fuel size={13} /> {v.fuel}</span>
                   </div>
                   <div className="card-price">
-                    <div className="price-meter">${v.rate}<small> /day</small></div>
+                    <div className="price-meter">₹{v.rate}<small> /day</small></div>
                   </div>
                   <button className="card-cta" onClick={() => setSelectedVehicle(v)}>
                     View details & calendar
