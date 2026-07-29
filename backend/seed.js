@@ -377,7 +377,7 @@ const seedDB = async () => {
 
     // Seed Vehicles
     const vehiclesData = [
-      {
+      // {
       //   id: 'v1',
       //   kind: 'car',
       //   emoji: '🚙',
