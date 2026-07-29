@@ -1,13 +1,13 @@
-# RentalPort (PlateUp) — Centralized Vehicle Rental Platform PRD & Technical Documentation
+# RentalPort  — Centralized Vehicle Rental Platform PRD & Technical Documentation
 
 ## 1. Executive Summary & Brand Overview
-**RentalPort (PlateUp)** is a centralized, web-based digital platform enabling users to rent two-wheelers (2W - motorcycles, scooters, bicycles) and four-wheelers (4W - cars, SUVs, passenger vans) on a **daily, weekly, or monthly** basis. 
+**RentalPort** is a centralized, web-based digital platform enabling users to rent two-wheelers (2W - motorcycles, scooters) and four-wheelers (4W - cars) on a **daily, weekly, or monthly** basis. 
 
 It provides rental agencies with fleet management tools to control pricing, availability, and vehicle maintenance, while giving site administrators full platform moderation, auditing, and analytics oversight.
 
 ### Key Highlights
 - **Multi-Role Portals**: Customer Portal, Rental Agency / Partner Dashboard, and Site Administrator Control Center.
-- **Flexible Rental Durations**: Daily rates, Weekly rates, and Monthly rates with automatic discount calculations.
+- **Flexible Rental Durations**: Daily rates, Weekly rates, and Monthly rates calculations.
 - **Interactive Visual Calendar**: Month-view calendar displaying real-time open dates (green) and reserved dates (red) with interactive date-range picking.
 - **Fleet Maintenance Blocking**: Agencies can block individual vehicles for servicing or repairs.
 - **KPI System Analytics**: Real-time tracking of registered users, booking conversion rates, utilization rates, conflict rates, average rental duration, and monthly active users.
@@ -16,18 +16,15 @@ It provides rental agencies with fleet management tools to control pricing, avai
 ---
 
 ## 2. Key Performance Indicators (KPIs) & Analytics
-The system measures the following core operational and financial metrics:
+The system measures the following core operational and financial metrics
 
-| Key Performance Indicator (KPI) | Description / Calculation Formula | Target Benchmark |
-| :--- | :--- | :--- |
-| **Number of Registered Users** | Total count of registered Customer, Partner, and Admin accounts | Growth metric |
-| **Booking Conversion Rate (%)** | `(Paid Bookings / Total Booking Requests) * 100` | ≥ 80% |
-| **Vehicle Utilization Rate (%)** | `(Booked Out & Maintenance Vehicles / Total Fleet) * 100` | 40% – 70% |
-| **Booking Conflict Rate (%)** | `(Overlapping & Declined Requests / Total Requests) * 100` | < 5% |
-| **Average Rental Duration** | `Sum(Days per Booking) / Total Count of Bookings` | ~ 3.5 Days |
-| **Monthly Active Users (MAU)** | Total active unique users engaging in search, listing, or booking per month | Platform scale |
-| **Total Revenue** | `Sum(Total Amount for Paid Bookings)` | Gross revenue |
-
+**Number of Registered Users**<br>
+**Booking Conversion Rate (%)**<br>
+**Vehicle Utilization Rate (%)**<br>
+| **Booking Conflict Rate (%)**<br>
+**Average Rental Duration**<br>
+**Monthly Active Users (MAU)**<br>
+**Total Revenue**
 ---
 
 ## 3. MongoDB Data Models & Schemas
@@ -64,7 +61,6 @@ The system measures the following core operational and financial metrics:
 - `brand`: String (Vehicle Make e.g., `'Honda'`)
 - `model`: String (Vehicle Model e.g., `'Civic Hatchback'`)
 - `kind`: Enum (`'car'`, `'bike'`) — 4W vs 2W classification
-- `emoji`: String (e.g., `'🚗'`, `'🏍️'`, `'🛵'`, `'🚲'`)
 - `name`: String (Display Name)
 - `tagline`: String (Brief description)
 - `city`: String (Location City)
