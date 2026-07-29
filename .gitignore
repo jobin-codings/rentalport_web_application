@@ -35,3 +35,6 @@ Thumbs.db
 .vscode/
 *.suo
 *.user
+implementation_plan.md
+walkthrough.md
+PRD_TECHNICAL_DOCS.md
